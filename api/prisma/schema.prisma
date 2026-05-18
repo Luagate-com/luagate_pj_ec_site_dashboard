@@ -1,0 +1,74 @@
+// LuaGate 実践開発プロジェクト④ — EC サイト売上分析ダッシュボード
+// PostgreSQL + Prisma
+//
+// テーブル設計の方針
+//   users        — 分析担当者 (認証)
+//   products     — 商品マスタ (カテゴリ別)
+//   orders       — 注文ヘッダ (1 注文 = 1 ユーザの 1 回の購入)
+//   order_items  — 注文明細 (orders : items = 1 : N)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  displayName  String   @map("display_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@map("users")
+}
+
+model Product {
+  id        String   @id @default(cuid())
+  name      String
+  category  String   // "エレクトロニクス" | "ファッション" | "ホーム&キッチン" | "スポーツ&アウトドア" | "書籍&メディア"
+  price     Int      // 円単位 (税込み想定の単価)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orderItems OrderItem[]
+
+  @@index([category])
+  @@map("products")
+}
+
+model Order {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  total     Int      // 円単位 (注文合計)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items OrderItem[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String @map("order_id")
+  productId String @map("product_id")
+  quantity  Int
+  unitPrice Int    @map("unit_price") // 円単位 (注文時点の単価)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
