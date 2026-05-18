@@ -152,3 +152,9 @@ LIMIT 10;
 ## Figma
 
 https://www.figma.com/design/5LLAPdI03tsb3z0ufTofP6/?node-id=834-1390
+
+## デモ URL (本番)
+
+- **Frontend** https://prod-luagate-pj-dashboard-frontend-v3bbmayaea-an.a.run.app
+- **API** https://prod-luagate-pj-dashboard-api-v3bbmayaea-an.a.run.app
+- **デモアカウント** alice@example.com / bob@example.com / carol@example.com (password: `password123`)
