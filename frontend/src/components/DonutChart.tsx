@@ -1,7 +1,12 @@
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { formatYen } from "../lib/format";
+// TODO Ch7-8 ドーナツ (円) チャート + 凡例実装
+// Recharts (PieChart, Pie, Cell, ResponsiveContainer, Tooltip) で
+// カテゴリ別売上シェアを表示してください。
+// ヒント
+// - innerRadius=80, outerRadius=130 でドーナツ
+// - data.map で Cell に CATEGORY_COLORS から色を割り当てる
+// - 中央に平均客単価を絶対配置で表示 (pointer-events-none)
 
-// Figma 仕様の 5 カテゴリ色 (緑系 + アクセント)
+// Figma 仕様の 5 カテゴリ色 (緑系 + アクセント)。完成版でも同じ配色を使います。
 const CATEGORY_COLORS: Record<string, string> = {
   "エレクトロニクス": "#05B45B",
   "ファッション": "#0EA5E9",
@@ -23,38 +28,13 @@ interface DonutChartProps {
 }
 
 export function DonutChart({ data, centerLabel, centerValue }: DonutChartProps) {
+  // TODO 受講生はここを Recharts の PieChart で書き換えてください
   return (
-    <div className="relative">
-      <ResponsiveContainer width="100%" height={320}>
-        <PieChart>
-          <Pie
-            data={data}
-            dataKey="revenue"
-            nameKey="category"
-            cx="50%"
-            cy="50%"
-            innerRadius={80}
-            outerRadius={130}
-            paddingAngle={2}
-            stroke="none"
-          >
-            {data.map((entry) => (
-              <Cell key={entry.category} fill={CATEGORY_COLORS[entry.category] ?? "#AEADA9"} />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(value: number, _name: string, entry) => {
-              const cat = entry?.payload?.category as string | undefined;
-              const share = entry?.payload?.share as number | undefined;
-              return [`${formatYen(value)} (${share ?? 0}%)`, cat ?? ""];
-            }}
-            contentStyle={{ borderRadius: 8, borderColor: "#DCDCD9", fontSize: 12 }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xs text-ink-sub">{centerLabel}</span>
-        <span className="text-2xl font-bold text-ink">{centerValue}</span>
+    <div className="relative flex h-[320px] w-full flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-second text-sm text-ink-sub">
+      <span>TODO Ch7-8 ドーナツチャート ({data.length} カテゴリ)</span>
+      <div className="mt-4 text-center">
+        <div className="text-xs text-ink-sub">{centerLabel}</div>
+        <div className="text-2xl font-bold text-ink">{centerValue}</div>
       </div>
     </div>
   );

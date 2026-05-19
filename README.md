@@ -1,8 +1,44 @@
-# LuaGate 実践開発プロジェクト④ EC サイト売上分析ダッシュボード
+# LuaGate 実践開発プロジェクト④ EC サイト売上分析ダッシュボード (starter)
+
+> **このブランチは受講生が手を動かすための starter テンプレートです。**
+> 完成版コードは `main` ブランチを参照してください。
 
 LuaGate の実践開発プロジェクト 4 部作の最終章。**PJ#1 で作った EC サイト** の売上データを分析する管理者向けダッシュボードを構築する。
 
 集計 SQL (GROUP BY / SUM / 月別 / カテゴリ別)、可視化 (Recharts)、認証付きダッシュボードを一気通貫で学ぶ。
+
+## starter の進め方
+
+このブランチでは下記が **TODO (501 を返す or プレースホルダー UI)** になっています。
+LuaGate のカリキュラム Ch7-3 〜 Ch7-8 を順番に進めながら埋めていってください。
+
+### API 側 (`api/src/routes/dashboard.ts`)
+
+| TODO | 章 | やること |
+| --- | --- | --- |
+| `GET /api/dashboard/summary` | Ch7-3 | 総売上 / 総注文数 / 客単価 + 前年差分 + sparkline |
+| `GET /api/dashboard/monthly` | Ch7-4 | DATE_TRUNC('month', ...) で月次集計 |
+| `GET /api/dashboard/weekly` | Ch7-5 | DATE_TRUNC('week', ...) で週次集計 |
+| `GET /api/dashboard/products/sales-ranking` | Ch7-5 | JOIN + GROUP BY + ORDER BY revenue |
+| `GET /api/dashboard/products/order-ranking` | Ch7-5 | JOIN + GROUP BY + ORDER BY units |
+| `GET /api/dashboard/categories` | Ch7-5 | カテゴリ別シェアと客単価 |
+
+### Frontend 側 (`frontend/src/components/`)
+
+| TODO | 章 | やること |
+| --- | --- | --- |
+| `KpiCard.tsx` | Ch7-6 | 増減バッジ + 大数値 + ミニグラフを組み立てる |
+| `Sparkline.tsx` | Ch7-6 | Recharts の LineChart / BarChart で小さなグラフ |
+| `LineChart.tsx` | Ch7-7 | Recharts の LineChart で売上推移を描画 |
+| `RankingList.tsx` | Ch7-8 | 横棒の BarChart (layout=vertical) でランキング |
+| `DonutChart.tsx` | Ch7-8 | 円グラフ (innerRadius でドーナツ) + 中央表示 |
+
+各 TODO ファイルにヒントコメントが書いてあるので、Figma + 完成版 URL を見ながら自力で書いてみてください。
+
+## DB について
+
+- Neon の `luagate_dashboard` データベースを **完成版と共有** しています (受講生が自前で seed を流し直す必要なし)
+- ローカルで動かす場合のみ Docker + `prisma migrate` + `npm run db:seed` が必要
 
 ## 世界観
 
@@ -155,6 +191,17 @@ https://www.figma.com/design/5LLAPdI03tsb3z0ufTofP6/?node-id=834-1390
 
 ## デモ URL (本番)
 
+### 完成版 (main ブランチ)
+
 - **Frontend** https://prod-luagate-pj-dashboard-frontend-v3bbmayaea-an.a.run.app
 - **API** https://prod-luagate-pj-dashboard-api-v3bbmayaea-an.a.run.app
-- **デモアカウント** alice@example.com / bob@example.com / carol@example.com (password: `password123`)
+
+### starter (このブランチ)
+
+- **Frontend** https://prod-luagate-pj-dashboard-starter-frontend-v3bbmayaea-an.a.run.app
+- **API** https://prod-luagate-pj-dashboard-starter-api-v3bbmayaea-an.a.run.app
+- API は 501 を返す TODO 集計が含まれているので、Frontend は読み込み中のままになる箇所があります (これが starter の正しい状態です)
+
+### デモアカウント
+
+alice@example.com / bob@example.com / carol@example.com (password: `password123`)

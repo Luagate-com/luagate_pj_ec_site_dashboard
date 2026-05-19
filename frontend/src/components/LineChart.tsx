@@ -1,12 +1,12 @@
-import {
-  CartesianGrid,
-  Line,
-  LineChart as RechartsLineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+// TODO Ch7-7 折れ線グラフ実装
+// Recharts (LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer) を
+// 使って Figma の折れ線グラフ仕様を実装してください。
+// ヒント
+// - import { CartesianGrid, Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+// - ResponsiveContainer で高さ 320px のグラフを描画
+// - dataKey={xKey as string} / {yKey as string}
+// - 軸ラベル色 "#727270"、グリッド色 "#EFEEE8"
+// - tooltip の formatter で formatY を使う
 
 interface LineChartProps<T extends object> {
   data: T[];
@@ -23,32 +23,17 @@ export function LineChart<T extends object>({
   yKey,
   yLabel,
   formatY,
-  color = "#05B45B",
+  color: _color = "#05B45B",
 }: LineChartProps<T>) {
+  // TODO 受講生はここを Recharts で書き換えてください
+  void data;
+  void xKey;
+  void yKey;
+  void yLabel;
+  void formatY;
   return (
-    <ResponsiveContainer width="100%" height={320}>
-      <RechartsLineChart data={data} margin={{ top: 10, right: 16, left: 16, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#EFEEE8" />
-        <XAxis dataKey={xKey as string} stroke="#727270" fontSize={12} tickMargin={6} />
-        <YAxis
-          stroke="#727270"
-          fontSize={12}
-          tickFormatter={formatY ? (v: number) => formatY(v) : undefined}
-          width={70}
-        />
-        <Tooltip
-          formatter={(value: number) => [formatY ? formatY(value) : value.toLocaleString("ja-JP"), yLabel ?? (yKey as string)]}
-          contentStyle={{ borderRadius: 8, borderColor: "#DCDCD9", fontSize: 12 }}
-        />
-        <Line
-          type="monotone"
-          dataKey={yKey as string}
-          stroke={color}
-          strokeWidth={2.5}
-          dot={{ r: 3, fill: color }}
-          activeDot={{ r: 5 }}
-        />
-      </RechartsLineChart>
-    </ResponsiveContainer>
+    <div className="flex h-[320px] w-full items-center justify-center rounded-lg border border-dashed border-line bg-surface-second text-sm text-ink-sub">
+      TODO Ch7-7 Recharts で折れ線グラフを描画する ({data.length} 件のデータ)
+    </div>
   );
 }
