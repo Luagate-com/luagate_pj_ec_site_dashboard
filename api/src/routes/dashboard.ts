@@ -15,33 +15,81 @@ export const dashboardRouter = Router();
 // 全エンドポイント要認証
 dashboardRouter.use(requireAuth);
 
-// 動作確認用に prisma を 1 度だけ参照 (未使用警告を抑える)。
-// 集計 SQL を書き始めたら不要なので消して構いません。
-void prisma;
-
 // ===== /api/dashboard/summary =====
 // Ch10: KPI 集計 API
 // 総売上 / 総注文数 / 客単価 + 前年比増減 + 直近 6 ヶ月の sparkline を返す。
 //
-// ヒント
-// - SELECT SUM(total), COUNT(*) FROM orders WHERE EXTRACT(YEAR FROM created_at) = $1
-// - 前年 (year - 1) でも同じ集計を行う
-// - sparkline は DATE_TRUNC('month', created_at) で GROUP BY して直近 6 ヶ月分を抜き出す
-// - 客単価 (AOV) = 売上 / 注文数。0 除算に注意
-dashboardRouter.get("/summary", async (_req, res) => {
-  // TODO Ch10 集計クエリ
-  // 1) 当年 (2025) の総売上 / 総注文数を $queryRaw で取得
-  // 2) 前年 (2024) も同様に取得
-  // 3) sparkline 用に直近 6 ヶ月の月別売上 / 注文数を集計
-  // 4) AOV (客単価) を計算
-  // 計算が終わったら下の res.json のダミー値を置き換えてください。
-  res.status(501).json({
-    error: "Not implemented yet — see chapter 10 (/api/dashboard/summary)",
-    hint: "prisma.$queryRaw で SUM(total), COUNT(*) を集計してください",
+// 教材 Ch10 の $queryRaw + 集計関数パターンを写経。
+// 実 Prisma schema に合わせて orders.total / orders.created_at を使う。
+const summaryQuerySchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100).default(2025),
+});
+
+type AggRow = { total_revenue: bigint; order_count: bigint };
+type SparkRow = { month: Date; revenue: bigint; orders: bigint };
+
+dashboardRouter.get("/summary", async (req, res) => {
+  const parsed = summaryQuerySchema.safeParse(req.query);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const { year } = parsed.data;
+
+  // 1) 当年・前年の総売上 / 総注文数を $queryRaw で集計
+  const aggregate = (y: number) =>
+    prisma.$queryRaw<AggRow[]>`
+      SELECT
+        COALESCE(SUM(total), 0)::bigint AS total_revenue,
+        COUNT(*)::bigint               AS order_count
+      FROM orders
+      WHERE EXTRACT(YEAR FROM created_at) = ${y};
+    `;
+
+  // 3) sparkline 用に当年の月別売上 / 注文数を集計し、直近 6 ヶ月を抜き出す
+  const [curRows, prevRows, sparkRows] = await Promise.all([
+    aggregate(year),
+    aggregate(year - 1),
+    prisma.$queryRaw<SparkRow[]>`
+      SELECT
+        DATE_TRUNC('month', created_at) AS month,
+        COALESCE(SUM(total), 0)::bigint AS revenue,
+        COUNT(*)::bigint               AS orders
+      FROM orders
+      WHERE EXTRACT(YEAR FROM created_at) = ${year}
+      GROUP BY DATE_TRUNC('month', created_at)
+      ORDER BY month;
+    `,
+  ]);
+
+  const cur = curRows[0] ?? { total_revenue: 0n, order_count: 0n };
+  const prev = prevRows[0] ?? { total_revenue: 0n, order_count: 0n };
+
+  const revenueSpark = sparkRows.slice(-6).map((r) => Number(r.revenue));
+  const ordersSpark = sparkRows.slice(-6).map((r) => Number(r.orders));
+  const aovSpark = sparkRows.slice(-6).map((r) => {
+    const rev = Number(r.revenue);
+    const ord = Number(r.orders);
+    return ord > 0 ? Math.round(rev / ord) : 0;
+  });
+
+  // 4) AOV (客単価) = 売上 / 注文数。0 除算に注意
+  const buildKpi = (current: number, previous: number, sparkline: number[]) => ({
+    current,
+    previous,
+    delta: current - previous,
+    sparkline,
+  });
+
+  const curRevenue = Number(cur.total_revenue);
+  const curOrders = Number(cur.order_count);
+  const prevRevenue = Number(prev.total_revenue);
+  const prevOrders = Number(prev.order_count);
+  const curAov = curOrders > 0 ? Math.round(curRevenue / curOrders) : 0;
+  const prevAov = prevOrders > 0 ? Math.round(prevRevenue / prevOrders) : 0;
+
+  res.json({
     updatedAt: new Date().toISOString(),
-    revenue: { current: 0, previous: 0, delta: 0, sparkline: [] as number[] },
-    orders: { current: 0, previous: 0, delta: 0, sparkline: [] as number[] },
-    aov: { current: 0, previous: 0, delta: 0, sparkline: [] as number[] },
+    revenue: buildKpi(curRevenue, prevRevenue, revenueSpark),
+    orders: buildKpi(curOrders, prevOrders, ordersSpark),
+    aov: buildKpi(curAov, prevAov, aovSpark),
   });
 });
 
