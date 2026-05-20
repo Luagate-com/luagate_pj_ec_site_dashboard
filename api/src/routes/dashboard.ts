@@ -104,24 +104,32 @@ dashboardRouter.get("/monthly", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { year } = parsed.data;
 
-  // TODO Ch11 月別集計
-  // ヒント
-  // - DATE_TRUNC('month', created_at) で月単位グループ化
-  // - SUM(total) で売上、COUNT(*) で注文数
-  // - 12 ヶ月分にパディング (データの無い月は revenue=0, orders=0)
-  // - 戻り値の monthly[].month は "YYYY-MM" 形式、label は "1月" のような表記
-  const monthly = Array.from({ length: 12 }, (_, m) => ({
-    month: `${year}-${String(m + 1).padStart(2, "0")}`,
-    label: `${m + 1}月`,
-    revenue: 0,
-    orders: 0,
-  }));
+  // Ch11 月別集計
+  // EXTRACT(MONTH FROM created_at) で月番号を取り出してグループ化、SUM(total)/COUNT(*)
+  const rows = await prisma.$queryRaw<Array<{ m: number; revenue: bigint; orders: bigint }>>`
+    SELECT
+      EXTRACT(MONTH FROM created_at)::int AS m,
+      COALESCE(SUM(total), 0)::bigint     AS revenue,
+      COUNT(*)::bigint                    AS orders
+    FROM orders
+    WHERE EXTRACT(YEAR FROM created_at) = ${year}
+    GROUP BY 1
+    ORDER BY 1;
+  `;
 
-  return res.status(501).json({
-    error: "Not implemented yet — see chapter 11 (/api/dashboard/monthly)",
-    year,
-    monthly,
+  // 12 ヶ月分にパディング (データの無い月は revenue=0, orders=0)
+  const byMonth = new Map(rows.map((r) => [r.m, r]));
+  const monthly = Array.from({ length: 12 }, (_, i) => {
+    const r = byMonth.get(i + 1);
+    return {
+      month: `${year}-${String(i + 1).padStart(2, "0")}`,
+      label: `${i + 1}月`,
+      revenue: r ? Number(r.revenue) : 0,
+      orders: r ? Number(r.orders) : 0,
+    };
   });
+
+  return res.json({ year, monthly });
 });
 
 // ===== /api/dashboard/weekly =====
@@ -135,17 +143,33 @@ dashboardRouter.get("/weekly", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { month } = parsed.data;
 
-  // TODO Ch12 週別集計
-  // ヒント
-  // - 対象月の開始 / 終了日を計算 (例 new Date(year, monthNum - 1, 1) と new Date(year, monthNum, 1))
-  // - DATE_TRUNC('week', created_at) で週単位グループ化
-  // - WHERE created_at >= $start AND created_at < $end
-  // - 戻り値の week は "YYYY-MM-DD"、label は "第N週"
-  return res.status(501).json({
-    error: "Not implemented yet — see chapter 12 (/api/dashboard/weekly)",
-    month,
-    weekly: [] as Array<{ week: string; label: string; revenue: number; orders: number }>,
-  });
+  // Ch12 週別集計
+  // 対象月の開始 / 終了日を計算し、DATE_TRUNC('week', created_at) で週単位グループ化
+  const [yStr, mStr] = month.split("-");
+  const yNum = Number(yStr);
+  const mNum = Number(mStr);
+  const start = new Date(Date.UTC(yNum, mNum - 1, 1));
+  const end = new Date(Date.UTC(yNum, mNum, 1));
+
+  const rows = await prisma.$queryRaw<Array<{ week: Date; revenue: bigint; orders: bigint }>>`
+    SELECT
+      DATE_TRUNC('week', created_at)::date AS week,
+      COALESCE(SUM(total), 0)::bigint       AS revenue,
+      COUNT(DISTINCT id)::bigint            AS orders
+    FROM orders
+    WHERE created_at >= ${start} AND created_at < ${end}
+    GROUP BY DATE_TRUNC('week', created_at)
+    ORDER BY DATE_TRUNC('week', created_at);
+  `;
+
+  const weekly = rows.map((r, idx) => ({
+    week: r.week.toISOString().slice(0, 10),
+    label: `第${idx + 1}週`,
+    revenue: Number(r.revenue),
+    orders: Number(r.orders),
+  }));
+
+  return res.json({ month, weekly });
 });
 
 // ===== /api/dashboard/products/sales-ranking =====
@@ -160,17 +184,36 @@ dashboardRouter.get("/products/sales-ranking", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { year, limit } = parsed.data;
 
-  // TODO Ch12 商品売上ランキング
-  // ヒント
-  // - order_items と products / orders を JOIN
-  // - SUM(oi.quantity * oi.unit_price) を revenue として集計
-  // - GROUP BY p.id, p.name, p.category
-  // - ORDER BY revenue DESC LIMIT $limit
-  return res.status(501).json({
-    error: "Not implemented yet — see chapter 12 (/api/dashboard/products/sales-ranking)",
+  // Ch12 商品売上ランキング
+  // order_items × products × orders を JOIN し SUM(quantity * unit_price) で集計
+  const ranking = await prisma.$queryRaw<
+    Array<{ id: string; name: string; category: string; revenue: bigint; units: bigint }>
+  >`
+    SELECT
+      p.id                                       AS id,
+      p.name                                     AS name,
+      p.category                                 AS category,
+      SUM(oi.quantity * oi.unit_price)::bigint   AS revenue,
+      SUM(oi.quantity)::bigint                   AS units
+    FROM order_items oi
+    JOIN products p ON p.id = oi.product_id
+    JOIN orders   o ON o.id = oi.order_id
+    WHERE EXTRACT(YEAR FROM o.created_at) = ${year}
+    GROUP BY p.id, p.name, p.category
+    ORDER BY revenue DESC
+    LIMIT ${limit};
+  `;
+
+  return res.json({
     year,
     limit,
-    ranking: [] as Array<{ id: string; name: string; category: string; revenue: number; units: number }>,
+    ranking: ranking.map((r) => ({
+      id: r.id,
+      name: r.name,
+      category: r.category,
+      revenue: Number(r.revenue),
+      units: Number(r.units),
+    })),
   });
 });
 
@@ -181,22 +224,55 @@ dashboardRouter.get("/products/order-ranking", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { year, limit } = parsed.data;
 
-  // TODO Ch12 商品注文数ランキング
-  // ヒント
-  // - 売上ランキングと似た JOIN だが ORDER BY units DESC
-  // - 折れ線用の monthly[] (月別注文数) も別途集計する
-  const monthly = Array.from({ length: 12 }, (_, m) => ({
-    month: `${year}-${String(m + 1).padStart(2, "0")}`,
-    label: `${m + 1}月`,
-    orders: 0,
+  // Ch12 商品注文数ランキング
+  // 売上ランキングと同じ JOIN だが ORDER BY units DESC
+  // units は「商品が登場した注文数」を COUNT(DISTINCT o.id) で数える
+  const ranking = await prisma.$queryRaw<
+    Array<{ id: string; name: string; category: string; units: bigint; revenue: bigint }>
+  >`
+    SELECT
+      p.id                                       AS id,
+      p.name                                     AS name,
+      p.category                                 AS category,
+      COUNT(DISTINCT o.id)::bigint               AS units,
+      SUM(oi.quantity * oi.unit_price)::bigint   AS revenue
+    FROM order_items oi
+    JOIN products p ON p.id = oi.product_id
+    JOIN orders   o ON o.id = oi.order_id
+    WHERE EXTRACT(YEAR FROM o.created_at) = ${year}
+    GROUP BY p.id, p.name, p.category
+    ORDER BY units DESC, revenue DESC
+    LIMIT ${limit};
+  `;
+
+  // 折れ線用の monthly[] (月別注文数)
+  const monthlyRows = await prisma.$queryRaw<Array<{ m: number; orders: bigint }>>`
+    SELECT
+      EXTRACT(MONTH FROM created_at)::int AS m,
+      COUNT(*)::bigint                    AS orders
+    FROM orders
+    WHERE EXTRACT(YEAR FROM created_at) = ${year}
+    GROUP BY 1
+    ORDER BY 1;
+  `;
+  const byMonth = new Map(monthlyRows.map((r) => [r.m, Number(r.orders)]));
+  const monthly = Array.from({ length: 12 }, (_, i) => ({
+    month: `${year}-${String(i + 1).padStart(2, "0")}`,
+    label: `${i + 1}月`,
+    orders: byMonth.get(i + 1) ?? 0,
   }));
 
-  return res.status(501).json({
-    error: "Not implemented yet — see chapter 12 (/api/dashboard/products/order-ranking)",
+  return res.json({
     year,
     limit,
     monthly,
-    ranking: [] as Array<{ id: string; name: string; category: string; units: number; revenue: number }>,
+    ranking: ranking.map((r) => ({
+      id: r.id,
+      name: r.name,
+      category: r.category,
+      units: Number(r.units),
+      revenue: Number(r.revenue),
+    })),
   });
 });
 
@@ -211,30 +287,87 @@ dashboardRouter.get("/categories", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { year } = parsed.data;
 
-  // TODO Ch12 カテゴリ集計
-  // ヒント
-  // - p.category で GROUP BY
-  // - SUM(oi.quantity * oi.unit_price) を revenue、COUNT(DISTINCT o.id) を order_count
-  // - share = revenue / SUM(revenue) を計算 (合計売上は別クエリ or Window Function)
-  // - 月別客単価 monthly[] (revenue / orders) も併せて返す
-  const monthly = Array.from({ length: 12 }, (_, m) => ({
-    month: `${year}-${String(m + 1).padStart(2, "0")}`,
-    label: `${m + 1}月`,
-    aov: 0,
-  }));
-
-  return res.status(501).json({
-    error: "Not implemented yet — see chapter 12 (/api/dashboard/categories)",
-    year,
-    overallAov: 0,
-    monthly,
-    categories: [] as Array<{
+  // Ch12 カテゴリ集計
+  // p.category で GROUP BY、Window Function SUM(...) OVER () で全体売上に対するシェアを算出
+  const catRows = await prisma.$queryRaw<
+    Array<{
       category: string;
-      revenue: number;
-      units: number;
-      orderCount: number;
-      averageOrderValue: number;
+      revenue: bigint;
+      units: bigint;
+      order_count: bigint;
       share: number;
-    }>,
+    }>
+  >`
+    SELECT
+      p.category                                 AS category,
+      SUM(oi.quantity * oi.unit_price)::bigint   AS revenue,
+      SUM(oi.quantity)::bigint                   AS units,
+      COUNT(DISTINCT o.id)::bigint               AS order_count,
+      ROUND(
+        SUM(oi.quantity * oi.unit_price)::numeric * 100.0
+        / NULLIF(SUM(SUM(oi.quantity * oi.unit_price)) OVER (), 0),
+        1
+      )::float                                   AS share
+    FROM order_items oi
+    JOIN products p ON p.id = oi.product_id
+    JOIN orders   o ON o.id = oi.order_id
+    WHERE EXTRACT(YEAR FROM o.created_at) = ${year}
+    GROUP BY p.category
+    ORDER BY revenue DESC;
+  `;
+
+  // 全体 AOV は orders テーブルから直接集計する (Ch12 の :::bad/:::good 参照)。
+  // カテゴリ別の orderCount を足し合わせると、1 注文が複数カテゴリにまたがる場合に
+  // 注文が重複カウントされ AOV が過小になる。必ず注文を一意に数えられる orders で出す。
+  const overallRows = await prisma.$queryRaw<Array<{ revenue: bigint; orders: bigint }>>`
+    SELECT
+      COALESCE(SUM(total), 0)::bigint AS revenue,
+      COUNT(*)::bigint               AS orders
+    FROM orders
+    WHERE EXTRACT(YEAR FROM created_at) = ${year};
+  `;
+  const overall = overallRows[0] ?? { revenue: 0n, orders: 0n };
+  const overallRevenue = Number(overall.revenue);
+  const overallOrders = Number(overall.orders);
+  const overallAov = overallOrders > 0 ? Math.round(overallRevenue / overallOrders) : 0;
+
+  // 月別客単価 monthly[] (revenue / orders) — これも orders 直接集計
+  const monthlyRows = await prisma.$queryRaw<Array<{ m: number; revenue: bigint; orders: bigint }>>`
+    SELECT
+      EXTRACT(MONTH FROM created_at)::int AS m,
+      COALESCE(SUM(total), 0)::bigint     AS revenue,
+      COUNT(*)::bigint                    AS orders
+    FROM orders
+    WHERE EXTRACT(YEAR FROM created_at) = ${year}
+    GROUP BY 1
+    ORDER BY 1;
+  `;
+  const byMonth = new Map(monthlyRows.map((r) => [r.m, r]));
+  const monthly = Array.from({ length: 12 }, (_, i) => {
+    const r = byMonth.get(i + 1);
+    const rev = r ? Number(r.revenue) : 0;
+    const ord = r ? Number(r.orders) : 0;
+    return {
+      month: `${year}-${String(i + 1).padStart(2, "0")}`,
+      label: `${i + 1}月`,
+      aov: ord > 0 ? Math.round(rev / ord) : 0,
+    };
   });
+
+  const categories = catRows.map((r) => {
+    const revenue = Number(r.revenue);
+    const orderCount = Number(r.order_count);
+    return {
+      category: r.category,
+      revenue,
+      units: Number(r.units),
+      orderCount,
+      // カテゴリ単位の AOV は「そのカテゴリの商品が含まれる注文数」で割る。
+      // これはカテゴリ指標としては正しいが、全体 AOV の算出には使わない。
+      averageOrderValue: orderCount > 0 ? Math.round(revenue / orderCount) : 0,
+      share: r.share ?? 0,
+    };
+  });
+
+  return res.json({ year, overallAov, monthly, categories });
 });
