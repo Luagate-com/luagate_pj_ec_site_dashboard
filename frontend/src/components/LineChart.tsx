@@ -1,12 +1,14 @@
-// TODO Ch14 折れ線グラフ実装
-// Recharts (LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer) を
-// 使って Figma の折れ線グラフ仕様を実装してください。
-// ヒント
-// - import { CartesianGrid, Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-// - ResponsiveContainer で高さ 320px のグラフを描画
-// - dataKey={xKey as string} / {yKey as string}
-// - 軸ラベル色 "#727270"、グリッド色 "#EFEEE8"
-// - tooltip の formatter で formatY を使う
+// Ch14 折れ線グラフ
+// Recharts で売上推移などの時系列データを折れ線で描画する。
+import {
+  CartesianGrid,
+  Line,
+  LineChart as RechartsLineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 interface LineChartProps<T extends object> {
   data: T[];
@@ -23,17 +25,40 @@ export function LineChart<T extends object>({
   yKey,
   yLabel,
   formatY,
-  color: _color = "#05B45B",
+  color = "#05B45B",
 }: LineChartProps<T>) {
-  // TODO 受講生はここを Recharts で書き換えてください
-  void data;
-  void xKey;
-  void yKey;
-  void yLabel;
-  void formatY;
   return (
-    <div className="flex h-[320px] w-full items-center justify-center rounded-lg border border-dashed border-line bg-surface-second text-sm text-ink-sub">
-      TODO Ch14 Recharts で折れ線グラフを描画する ({data.length} 件のデータ)
-    </div>
+    <ResponsiveContainer width="100%" height={320}>
+      <RechartsLineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
+        <CartesianGrid stroke="#EFEEE8" strokeDasharray="3 3" vertical={false} />
+        <XAxis
+          dataKey={xKey as string}
+          stroke="#727270"
+          fontSize={12}
+          tickLine={false}
+          axisLine={{ stroke: "#EFEEE8" }}
+        />
+        <YAxis
+          stroke="#727270"
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+          width={64}
+          tickFormatter={formatY ? (v: number) => formatY(v) : undefined}
+        />
+        <Tooltip
+          formatter={(value: number) => [formatY ? formatY(value) : value, yLabel ?? (yKey as string)]}
+        />
+        <Line
+          type="monotone"
+          dataKey={yKey as string}
+          name={yLabel ?? (yKey as string)}
+          stroke={color}
+          strokeWidth={2.5}
+          dot={{ r: 3, fill: color }}
+          activeDot={{ r: 5 }}
+        />
+      </RechartsLineChart>
+    </ResponsiveContainer>
   );
 }
