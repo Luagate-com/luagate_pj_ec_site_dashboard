@@ -1,10 +1,14 @@
-// TODO Ch7-8 ランキングリスト (横棒チャート)
-// Recharts (BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer) を使い
-// layout="vertical" で横棒のランキングチャートを描画してください。
-// ヒント
-// - height = max(320, items.length * 36) でアイテム数に応じて伸ばす
-// - YAxis dataKey="name" type="category" width={180}
-// - Cell fillOpacity={1 - idx * 0.06} で 1 位ほど濃く
+// Ch15 ランキングリスト (横棒チャート)
+// Recharts BarChart layout=vertical
+import {
+  Bar,
+  BarChart,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 interface RankingItem {
   name: string;
@@ -19,26 +23,54 @@ interface RankingListProps {
   title?: string;
 }
 
-export function RankingList({ items, formatValue, color: _color = "#05B45B", title }: RankingListProps) {
-  // TODO 受講生はここを Recharts の BarChart (layout=vertical) で書き換えてください
+export function RankingList({
+  items,
+  formatValue,
+  color = "#05B45B",
+  title,
+}: RankingListProps) {
+  const data = items.slice(0, 10);
+  const height = Math.max(320, data.length * 36);
+
   return (
     <div className="rounded-2xl border border-line bg-white p-6">
       {title && <h3 className="mb-4 text-base font-bold text-ink">{title}</h3>}
-      <div className="space-y-2">
-        <p className="text-xs text-ink-sub">TODO Ch7-8 横棒ランキングチャート</p>
-        <ul className="space-y-1 text-sm text-ink">
-          {items.slice(0, 10).map((item, idx) => (
-            <li key={`${item.name}-${idx}`} className="flex items-center justify-between border-b border-dashed border-line py-1">
-              <span>
-                {idx + 1}. {item.name}
-              </span>
-              <span className="text-ink-sub">
-                {formatValue ? formatValue(item.value) : item.value.toLocaleString("ja-JP")}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {data.length === 0 ? (
+        <p className="text-sm text-ink-sub">データがありません</p>
+      ) : (
+        <div style={{ height }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              layout="vertical"
+              margin={{ top: 8, right: 24, bottom: 8, left: 8 }}
+            >
+              <XAxis
+                type="number"
+                tick={{ fill: "#727270", fontSize: 12 }}
+                stroke="#DCDCD9"
+                tickFormatter={formatValue}
+              />
+              <YAxis
+                dataKey="name"
+                type="category"
+                width={180}
+                tick={{ fill: "#363635", fontSize: 12 }}
+                stroke="#DCDCD9"
+              />
+              <Tooltip
+                contentStyle={{ borderRadius: 8, border: "1px solid #DCDCD9", fontSize: 12 }}
+                formatter={(value: number) => (formatValue ? formatValue(value) : String(value))}
+              />
+              <Bar dataKey="value" fill={color} radius={[0, 4, 4, 0]}>
+                {data.map((_, idx) => (
+                  <Cell key={`cell-${idx}`} fill={color} fillOpacity={1 - idx * 0.06} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
