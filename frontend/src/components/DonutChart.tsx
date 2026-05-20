@@ -1,4 +1,4 @@
-// TODO Ch7-8 ドーナツ (円) チャート + 凡例実装
+// TODO Ch15 ドーナツ (円) チャート + 凡例実装
 // Recharts (PieChart, Pie, Cell, ResponsiveContainer, Tooltip) で
 // カテゴリ別売上シェアを表示してください。
 // ヒント
@@ -31,7 +31,7 @@ export function DonutChart({ data, centerLabel, centerValue }: DonutChartProps) 
   // TODO 受講生はここを Recharts の PieChart で書き換えてください
   return (
     <div className="relative flex h-[320px] w-full flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-second text-sm text-ink-sub">
-      <span>TODO Ch7-8 ドーナツチャート ({data.length} カテゴリ)</span>
+      <span>TODO Ch15 ドーナツチャート ({data.length} カテゴリ)</span>
       <div className="mt-4 text-center">
         <div className="text-xs text-ink-sub">{centerLabel}</div>
         <div className="text-2xl font-bold text-ink">{centerValue}</div>

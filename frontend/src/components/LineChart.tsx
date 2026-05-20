@@ -1,4 +1,4 @@
-// TODO Ch7-7 折れ線グラフ実装
+// TODO Ch14 折れ線グラフ実装
 // Recharts (LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer) を
 // 使って Figma の折れ線グラフ仕様を実装してください。
 // ヒント
@@ -33,7 +33,7 @@ export function LineChart<T extends object>({
   void formatY;
   return (
     <div className="flex h-[320px] w-full items-center justify-center rounded-lg border border-dashed border-line bg-surface-second text-sm text-ink-sub">
-      TODO Ch7-7 Recharts で折れ線グラフを描画する ({data.length} 件のデータ)
+      TODO Ch14 Recharts で折れ線グラフを描画する ({data.length} 件のデータ)
     </div>
   );
 }

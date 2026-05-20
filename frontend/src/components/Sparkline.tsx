@@ -1,4 +1,4 @@
-// TODO Ch7-6 / Ch7-7 ミニグラフ (Sparkline / MiniBarChart)
+// TODO Ch13 / Ch14 ミニグラフ (Sparkline / MiniBarChart)
 // KPI カード内に埋め込む小さな折れ線・棒グラフです。
 // ヒント
 // - import { Bar, BarChart, Line, LineChart, ResponsiveContainer } from "recharts";

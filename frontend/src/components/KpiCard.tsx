@@ -10,7 +10,7 @@ interface KpiCardProps {
   children?: React.ReactNode; // ミニグラフ (Sparkline / 棒グラフ)
 }
 
-// TODO Ch7-6 KPI カード実装
+// TODO Ch13 KPI カード実装
 // Figma の "KPI カード" 仕様を参考に下のスケルトンを仕上げてください。
 // 仕様
 // - ラベル (左上) と 増減バッジ (右上)。増減バッジは delta が 0 以上なら緑、負なら赤
@@ -28,7 +28,7 @@ export function KpiCard({ label, value, delta, deltaLabel, detailHref, children 
       <span className="text-sm font-medium text-ink-sub">{label}</span>
       <p className="mt-3 text-3xl font-bold text-ink">{value}</p>
       <div className="mt-4 flex h-16 items-center justify-center text-xs text-ink-sub">
-        TODO Ch7-6 ミニグラフ
+        TODO Ch13 ミニグラフ
       </div>
       {children}
       <Link

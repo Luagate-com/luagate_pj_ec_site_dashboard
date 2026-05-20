@@ -10,28 +10,28 @@ LuaGate の実践開発プロジェクト 4 部作の最終章。**PJ#1 で作�
 ## starter の進め方
 
 このブランチでは下記が **TODO (501 を返す or プレースホルダー UI)** になっています。
-LuaGate のカリキュラム Ch7-3 〜 Ch7-8 を順番に進めながら埋めていってください。
+LuaGate のカリキュラム Ch10 〜 Ch15 を順番に進めながら埋めていってください。
 
 ### API 側 (`api/src/routes/dashboard.ts`)
 
 | TODO | 章 | やること |
 | --- | --- | --- |
-| `GET /api/dashboard/summary` | Ch7-3 | 総売上 / 総注文数 / 客単価 + 前年差分 + sparkline |
-| `GET /api/dashboard/monthly` | Ch7-4 | DATE_TRUNC('month', ...) で月次集計 |
-| `GET /api/dashboard/weekly` | Ch7-5 | DATE_TRUNC('week', ...) で週次集計 |
-| `GET /api/dashboard/products/sales-ranking` | Ch7-5 | JOIN + GROUP BY + ORDER BY revenue |
-| `GET /api/dashboard/products/order-ranking` | Ch7-5 | JOIN + GROUP BY + ORDER BY units |
-| `GET /api/dashboard/categories` | Ch7-5 | カテゴリ別シェアと客単価 |
+| `GET /api/dashboard/summary` | Ch10 | 総売上 / 総注文数 / 客単価 + 前年差分 + sparkline |
+| `GET /api/dashboard/monthly` | Ch11 | DATE_TRUNC('month', ...) で月次集計 |
+| `GET /api/dashboard/weekly` | Ch12 | DATE_TRUNC('week', ...) で週次集計 |
+| `GET /api/dashboard/products/sales-ranking` | Ch12 | JOIN + GROUP BY + ORDER BY revenue |
+| `GET /api/dashboard/products/order-ranking` | Ch12 | JOIN + GROUP BY + ORDER BY units |
+| `GET /api/dashboard/categories` | Ch12 | カテゴリ別シェアと客単価 |
 
 ### Frontend 側 (`frontend/src/components/`)
 
 | TODO | 章 | やること |
 | --- | --- | --- |
-| `KpiCard.tsx` | Ch7-6 | 増減バッジ + 大数値 + ミニグラフを組み立てる |
-| `Sparkline.tsx` | Ch7-6 | Recharts の LineChart / BarChart で小さなグラフ |
-| `LineChart.tsx` | Ch7-7 | Recharts の LineChart で売上推移を描画 |
-| `RankingList.tsx` | Ch7-8 | 横棒の BarChart (layout=vertical) でランキング |
-| `DonutChart.tsx` | Ch7-8 | 円グラフ (innerRadius でドーナツ) + 中央表示 |
+| `KpiCard.tsx` | Ch13 | 増減バッジ + 大数値 + ミニグラフを組み立てる |
+| `Sparkline.tsx` | Ch13 | Recharts の LineChart / BarChart で小さなグラフ |
+| `LineChart.tsx` | Ch14 | Recharts の LineChart で売上推移を描画 |
+| `RankingList.tsx` | Ch15 | 横棒の BarChart (layout=vertical) でランキング |
+| `DonutChart.tsx` | Ch15 | 円グラフ (innerRadius でドーナツ) + 中央表示 |
 
 各 TODO ファイルにヒントコメントが書いてあるので、Figma + 完成版 URL を見ながら自力で書いてみてください。
 

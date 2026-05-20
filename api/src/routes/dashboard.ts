@@ -6,7 +6,7 @@ import { requireAuth } from "../middleware/auth";
 export const dashboardRouter = Router();
 
 // 受講生向けメモ
-// このファイルは Ch7-3 〜 Ch7-5 で順番に埋めていく集計 API のスケルトンです。
+// このファイルは Ch10 〜 Ch12 で順番に埋めていく集計 API のスケルトンです。
 // `prisma.$queryRaw` を使って PostgreSQL の集計関数 (SUM, COUNT, DATE_TRUNC, EXTRACT,
 // GROUP BY, JOIN) を書きながら、SQL の引き出しを増やすのがゴールです。
 // 各エンドポイントには TODO コメントとヒント、戻り値のダミーが用意されているので、
@@ -20,7 +20,7 @@ dashboardRouter.use(requireAuth);
 void prisma;
 
 // ===== /api/dashboard/summary =====
-// Ch7-3: KPI 集計 API
+// Ch10: KPI 集計 API
 // 総売上 / 総注文数 / 客単価 + 前年比増減 + 直近 6 ヶ月の sparkline を返す。
 //
 // ヒント
@@ -29,14 +29,14 @@ void prisma;
 // - sparkline は DATE_TRUNC('month', created_at) で GROUP BY して直近 6 ヶ月分を抜き出す
 // - 客単価 (AOV) = 売上 / 注文数。0 除算に注意
 dashboardRouter.get("/summary", async (_req, res) => {
-  // TODO Ch7-3 集計クエリ
+  // TODO Ch10 集計クエリ
   // 1) 当年 (2025) の総売上 / 総注文数を $queryRaw で取得
   // 2) 前年 (2024) も同様に取得
   // 3) sparkline 用に直近 6 ヶ月の月別売上 / 注文数を集計
   // 4) AOV (客単価) を計算
   // 計算が終わったら下の res.json のダミー値を置き換えてください。
   res.status(501).json({
-    error: "Not implemented yet — see chapter 7-3 (/api/dashboard/summary)",
+    error: "Not implemented yet — see chapter 10 (/api/dashboard/summary)",
     hint: "prisma.$queryRaw で SUM(total), COUNT(*) を集計してください",
     updatedAt: new Date().toISOString(),
     revenue: { current: 0, previous: 0, delta: 0, sparkline: [] as number[] },
@@ -46,7 +46,7 @@ dashboardRouter.get("/summary", async (_req, res) => {
 });
 
 // ===== /api/dashboard/monthly =====
-// Ch7-4: 月次売上 API (GROUP BY DATE_TRUNC('month', ...))
+// Ch11: 月次売上 API (GROUP BY DATE_TRUNC('month', ...))
 const monthlyQuerySchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100).default(2025),
 });
@@ -56,7 +56,7 @@ dashboardRouter.get("/monthly", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { year } = parsed.data;
 
-  // TODO Ch7-4 月別集計
+  // TODO Ch11 月別集計
   // ヒント
   // - DATE_TRUNC('month', created_at) で月単位グループ化
   // - SUM(total) で売上、COUNT(*) で注文数
@@ -70,14 +70,14 @@ dashboardRouter.get("/monthly", async (req, res) => {
   }));
 
   return res.status(501).json({
-    error: "Not implemented yet — see chapter 7-4 (/api/dashboard/monthly)",
+    error: "Not implemented yet — see chapter 11 (/api/dashboard/monthly)",
     year,
     monthly,
   });
 });
 
 // ===== /api/dashboard/weekly =====
-// Ch7-5: 週次・商品ランキング・カテゴリ集計 API (週次パート)
+// Ch12: 週次・商品ランキング・カテゴリ集計 API (週次パート)
 const weeklyQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/, "YYYY-MM").default("2025-12"),
 });
@@ -87,21 +87,21 @@ dashboardRouter.get("/weekly", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { month } = parsed.data;
 
-  // TODO Ch7-5 週別集計
+  // TODO Ch12 週別集計
   // ヒント
   // - 対象月の開始 / 終了日を計算 (例 new Date(year, monthNum - 1, 1) と new Date(year, monthNum, 1))
   // - DATE_TRUNC('week', created_at) で週単位グループ化
   // - WHERE created_at >= $start AND created_at < $end
   // - 戻り値の week は "YYYY-MM-DD"、label は "第N週"
   return res.status(501).json({
-    error: "Not implemented yet — see chapter 7-5 (/api/dashboard/weekly)",
+    error: "Not implemented yet — see chapter 12 (/api/dashboard/weekly)",
     month,
     weekly: [] as Array<{ week: string; label: string; revenue: number; orders: number }>,
   });
 });
 
 // ===== /api/dashboard/products/sales-ranking =====
-// Ch7-5: 商品売上ランキング (SUM(quantity * unit_price))
+// Ch12: 商品売上ランキング (SUM(quantity * unit_price))
 const productRankingQuerySchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100).default(2025),
   limit: z.coerce.number().int().min(1).max(50).default(10),
@@ -112,14 +112,14 @@ dashboardRouter.get("/products/sales-ranking", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { year, limit } = parsed.data;
 
-  // TODO Ch7-5 商品売上ランキング
+  // TODO Ch12 商品売上ランキング
   // ヒント
   // - order_items と products / orders を JOIN
   // - SUM(oi.quantity * oi.unit_price) を revenue として集計
   // - GROUP BY p.id, p.name, p.category
   // - ORDER BY revenue DESC LIMIT $limit
   return res.status(501).json({
-    error: "Not implemented yet — see chapter 7-5 (/api/dashboard/products/sales-ranking)",
+    error: "Not implemented yet — see chapter 12 (/api/dashboard/products/sales-ranking)",
     year,
     limit,
     ranking: [] as Array<{ id: string; name: string; category: string; revenue: number; units: number }>,
@@ -127,13 +127,13 @@ dashboardRouter.get("/products/sales-ranking", async (req, res) => {
 });
 
 // ===== /api/dashboard/products/order-ranking =====
-// Ch7-5: 商品注文数ランキング (SUM(quantity))
+// Ch12: 商品注文数ランキング (SUM(quantity))
 dashboardRouter.get("/products/order-ranking", async (req, res) => {
   const parsed = productRankingQuerySchema.safeParse(req.query);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { year, limit } = parsed.data;
 
-  // TODO Ch7-5 商品注文数ランキング
+  // TODO Ch12 商品注文数ランキング
   // ヒント
   // - 売上ランキングと似た JOIN だが ORDER BY units DESC
   // - 折れ線用の monthly[] (月別注文数) も別途集計する
@@ -144,7 +144,7 @@ dashboardRouter.get("/products/order-ranking", async (req, res) => {
   }));
 
   return res.status(501).json({
-    error: "Not implemented yet — see chapter 7-5 (/api/dashboard/products/order-ranking)",
+    error: "Not implemented yet — see chapter 12 (/api/dashboard/products/order-ranking)",
     year,
     limit,
     monthly,
@@ -153,7 +153,7 @@ dashboardRouter.get("/products/order-ranking", async (req, res) => {
 });
 
 // ===== /api/dashboard/categories =====
-// Ch7-5: カテゴリ別売上シェア + 客単価 (Window Function を使う余地あり)
+// Ch12: カテゴリ別売上シェア + 客単価 (Window Function を使う余地あり)
 const categoryQuerySchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100).default(2025),
 });
@@ -163,7 +163,7 @@ dashboardRouter.get("/categories", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { year } = parsed.data;
 
-  // TODO Ch7-5 カテゴリ集計
+  // TODO Ch12 カテゴリ集計
   // ヒント
   // - p.category で GROUP BY
   // - SUM(oi.quantity * oi.unit_price) を revenue、COUNT(DISTINCT o.id) を order_count
@@ -176,7 +176,7 @@ dashboardRouter.get("/categories", async (req, res) => {
   }));
 
   return res.status(501).json({
-    error: "Not implemented yet — see chapter 7-5 (/api/dashboard/categories)",
+    error: "Not implemented yet — see chapter 12 (/api/dashboard/categories)",
     year,
     overallAov: 0,
     monthly,

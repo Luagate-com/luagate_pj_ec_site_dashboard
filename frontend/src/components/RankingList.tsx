@@ -1,4 +1,4 @@
-// TODO Ch7-8 ランキングリスト (横棒チャート)
+// TODO Ch15 ランキングリスト (横棒チャート)
 // Recharts (BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer) を使い
 // layout="vertical" で横棒のランキングチャートを描画してください。
 // ヒント
@@ -25,7 +25,7 @@ export function RankingList({ items, formatValue, color: _color = "#05B45B", tit
     <div className="rounded-2xl border border-line bg-white p-6">
       {title && <h3 className="mb-4 text-base font-bold text-ink">{title}</h3>}
       <div className="space-y-2">
-        <p className="text-xs text-ink-sub">TODO Ch7-8 横棒ランキングチャート</p>
+        <p className="text-xs text-ink-sub">TODO Ch15 横棒ランキングチャート</p>
         <ul className="space-y-1 text-sm text-ink">
           {items.slice(0, 10).map((item, idx) => (
             <li key={`${item.name}-${idx}`} className="flex items-center justify-between border-b border-dashed border-line py-1">
