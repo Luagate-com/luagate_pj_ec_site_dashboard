@@ -15,33 +15,117 @@ export const dashboardRouter = Router();
 // 全エンドポイント要認証
 dashboardRouter.use(requireAuth);
 
-// 動作確認用に prisma を 1 度だけ参照 (未使用警告を抑える)。
-// 集計 SQL を書き始めたら不要なので消して構いません。
-void prisma;
+// ===== 共通: KPI / sparkline 集計関数 =====
+// Ch10 の Step 3 に倣って $queryRaw で SUM / COUNT / AVG を集計。
+// PostgreSQL の SUM/COUNT は bigint で返ってくるため Number() でラップする。
+
+interface RawAgg {
+  total_revenue: bigint | number;
+  order_count: bigint | number;
+  average_order_value: number;
+}
+
+interface RawMonth {
+  month: Date;
+  revenue: bigint | number;
+  orders: bigint | number;
+}
+
+async function aggregateRange(from: Date, to: Date): Promise<RawAgg> {
+  const rows = await prisma.$queryRaw<RawAgg[]>`
+    SELECT
+      COALESCE(SUM(total), 0)::bigint AS total_revenue,
+      COUNT(*)::bigint                AS order_count,
+      COALESCE(AVG(total), 0)::float  AS average_order_value
+    FROM orders
+    WHERE created_at >= ${from}
+      AND created_at <  ${to};
+  `;
+  return rows[0] ?? { total_revenue: 0n, order_count: 0n, average_order_value: 0 };
+}
+
+async function monthlySparkline(from: Date, to: Date): Promise<RawMonth[]> {
+  return prisma.$queryRaw<RawMonth[]>`
+    SELECT
+      DATE_TRUNC('month', created_at) AS month,
+      COALESCE(SUM(total), 0)::bigint AS revenue,
+      COUNT(*)::bigint                AS orders
+    FROM orders
+    WHERE created_at >= ${from}
+      AND created_at <  ${to}
+    GROUP BY DATE_TRUNC('month', created_at)
+    ORDER BY month;
+  `;
+}
+
+function buildKpi(curRaw: bigint | number, prevRaw: bigint | number, spark: number[]) {
+  const current = Number(curRaw);
+  const previous = Number(prevRaw);
+  return {
+    current: Math.round(current),
+    previous: Math.round(previous),
+    delta: Math.round(current - previous),
+    sparkline: spark,
+  };
+}
 
 // ===== /api/dashboard/summary =====
-// Ch7-3: KPI 集計 API
+// Ch10 (旧 Ch7-3): KPI 集計 API
 // 総売上 / 総注文数 / 客単価 + 前年比増減 + 直近 6 ヶ月の sparkline を返す。
-//
-// ヒント
-// - SELECT SUM(total), COUNT(*) FROM orders WHERE EXTRACT(YEAR FROM created_at) = $1
-// - 前年 (year - 1) でも同じ集計を行う
-// - sparkline は DATE_TRUNC('month', created_at) で GROUP BY して直近 6 ヶ月分を抜き出す
-// - 客単価 (AOV) = 売上 / 注文数。0 除算に注意
-dashboardRouter.get("/summary", async (_req, res) => {
-  // TODO Ch7-3 集計クエリ
-  // 1) 当年 (2025) の総売上 / 総注文数を $queryRaw で取得
-  // 2) 前年 (2024) も同様に取得
-  // 3) sparkline 用に直近 6 ヶ月の月別売上 / 注文数を集計
-  // 4) AOV (客単価) を計算
-  // 計算が終わったら下の res.json のダミー値を置き換えてください。
-  res.status(501).json({
-    error: "Not implemented yet — see chapter 7-3 (/api/dashboard/summary)",
-    hint: "prisma.$queryRaw で SUM(total), COUNT(*) を集計してください",
+const summaryQuerySchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100).default(2025),
+});
+
+dashboardRouter.get("/summary", async (req, res) => {
+  const parsed = summaryQuerySchema.safeParse(req.query);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const { year } = parsed.data;
+
+  // 比較しやすいよう「当年 1/1 〜 翌年 1/1」「前年 1/1 〜 当年 1/1」のレンジで集計。
+  const from = new Date(Date.UTC(year, 0, 1));
+  const to = new Date(Date.UTC(year + 1, 0, 1));
+  const prevFrom = new Date(Date.UTC(year - 1, 0, 1));
+  const prevTo = new Date(Date.UTC(year, 0, 1));
+
+  // 当年 (year) の最終 6 ヶ月 (7〜12 月) を sparkline として返す。
+  const sparkFrom = new Date(Date.UTC(year, 6, 1));
+  const sparkTo = new Date(Date.UTC(year + 1, 0, 1));
+
+  const [current, previous, monthly] = await Promise.all([
+    aggregateRange(from, to),
+    aggregateRange(prevFrom, prevTo),
+    monthlySparkline(sparkFrom, sparkTo),
+  ]);
+
+  // 6 ヶ月分にパディング (空月は 0)
+  const monthlyByKey = new Map<string, RawMonth>();
+  for (const m of monthly) {
+    const d = new Date(m.month);
+    monthlyByKey.set(`${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`, m);
+  }
+  const padded = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(Date.UTC(year, 6 + i, 1));
+    const key = `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`;
+    const row = monthlyByKey.get(key);
+    return {
+      revenue: row ? Number(row.revenue) : 0,
+      orders: row ? Number(row.orders) : 0,
+    };
+  });
+
+  const revenue = buildKpi(current.total_revenue, previous.total_revenue, padded.map((m) => m.revenue));
+  const orders = buildKpi(current.order_count, previous.order_count, padded.map((m) => m.orders));
+  const aov = buildKpi(
+    current.average_order_value,
+    previous.average_order_value,
+    padded.map((m) => (m.orders > 0 ? Math.round(m.revenue / m.orders) : 0)),
+  );
+
+  res.json({
     updatedAt: new Date().toISOString(),
-    revenue: { current: 0, previous: 0, delta: 0, sparkline: [] as number[] },
-    orders: { current: 0, previous: 0, delta: 0, sparkline: [] as number[] },
-    aov: { current: 0, previous: 0, delta: 0, sparkline: [] as number[] },
+    revenue,
+    orders,
+    aov,
   });
 });
 
