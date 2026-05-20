@@ -140,24 +140,37 @@ dashboardRouter.get("/monthly", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { year } = parsed.data;
 
-  // TODO Ch7-4 月別集計
-  // ヒント
-  // - DATE_TRUNC('month', created_at) で月単位グループ化
-  // - SUM(total) で売上、COUNT(*) で注文数
-  // - 12 ヶ月分にパディング (データの無い月は revenue=0, orders=0)
-  // - 戻り値の monthly[].month は "YYYY-MM" 形式、label は "1月" のような表記
-  const monthly = Array.from({ length: 12 }, (_, m) => ({
-    month: `${year}-${String(m + 1).padStart(2, "0")}`,
-    label: `${m + 1}月`,
-    revenue: 0,
-    orders: 0,
-  }));
+  // Ch11 月別集計
+  const from = new Date(Date.UTC(year, 0, 1));
+  const to = new Date(Date.UTC(year + 1, 0, 1));
+  const rows = await prisma.$queryRaw<RawMonth[]>`
+    SELECT
+      DATE_TRUNC('month', created_at) AS month,
+      COALESCE(SUM(total), 0)::bigint AS revenue,
+      COUNT(*)::bigint                AS orders
+    FROM orders
+    WHERE created_at >= ${from}
+      AND created_at <  ${to}
+    GROUP BY DATE_TRUNC('month', created_at)
+    ORDER BY month;
+  `;
 
-  return res.status(501).json({
-    error: "Not implemented yet — see chapter 7-4 (/api/dashboard/monthly)",
-    year,
-    monthly,
+  const byKey = new Map<number, RawMonth>();
+  for (const r of rows) {
+    const d = new Date(r.month);
+    byKey.set(d.getUTCMonth(), r);
+  }
+  const monthly = Array.from({ length: 12 }, (_, m) => {
+    const row = byKey.get(m);
+    return {
+      month: `${year}-${String(m + 1).padStart(2, "0")}`,
+      label: `${m + 1}月`,
+      revenue: row ? Number(row.revenue) : 0,
+      orders: row ? Number(row.orders) : 0,
+    };
   });
+
+  return res.json({ year, monthly });
 });
 
 // ===== /api/dashboard/weekly =====
