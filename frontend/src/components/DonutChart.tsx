@@ -1,10 +1,6 @@
-// TODO Ch15 ドーナツ (円) チャート + 凡例実装
-// Recharts (PieChart, Pie, Cell, ResponsiveContainer, Tooltip) で
-// カテゴリ別売上シェアを表示してください。
-// ヒント
-// - innerRadius=80, outerRadius=130 でドーナツ
-// - data.map で Cell に CATEGORY_COLORS から色を割り当てる
-// - 中央に平均客単価を絶対配置で表示 (pointer-events-none)
+// Ch15 ドーナツ (円) チャート + 凡例
+// Recharts の PieChart でカテゴリ別売上シェアを表示する。
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 // Figma 仕様の 5 カテゴリ色 (緑系 + アクセント)。完成版でも同じ配色を使います。
 const CATEGORY_COLORS: Record<string, string> = {
@@ -28,14 +24,53 @@ interface DonutChartProps {
 }
 
 export function DonutChart({ data, centerLabel, centerValue }: DonutChartProps) {
-  // TODO 受講生はここを Recharts の PieChart で書き換えてください
   return (
-    <div className="relative flex h-[320px] w-full flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface-second text-sm text-ink-sub">
-      <span>TODO Ch15 ドーナツチャート ({data.length} カテゴリ)</span>
-      <div className="mt-4 text-center">
-        <div className="text-xs text-ink-sub">{centerLabel}</div>
-        <div className="text-2xl font-bold text-ink">{centerValue}</div>
+    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+      {/* relative 親 + absolute オーバーレイで中央に値を重ねる */}
+      <div className="relative h-[320px] w-full sm:w-1/2">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="revenue"
+              nameKey="category"
+              cx="50%"
+              cy="50%"
+              innerRadius={80}
+              outerRadius={130}
+              paddingAngle={2}
+              isAnimationActive={false}
+            >
+              {data.map((seg) => (
+                <Cell
+                  key={seg.category}
+                  fill={CATEGORY_COLORS[seg.category] ?? "#AEADA9"}
+                />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value: number) => `${value.toLocaleString("ja-JP")} 円`} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-xs text-ink-sub">{centerLabel}</div>
+          <div className="text-2xl font-bold text-ink">{centerValue}</div>
+        </div>
       </div>
+      {/* 凡例 */}
+      <ul className="w-full space-y-2 sm:w-1/2">
+        {data.map((seg) => (
+          <li
+            key={seg.category}
+            className="flex items-center justify-between border-b border-dashed border-line py-1.5 text-sm"
+          >
+            <span className="flex items-center gap-2 text-ink">
+              <CategoryColorSwatch category={seg.category} />
+              {seg.category}
+            </span>
+            <span className="tabular-nums text-ink-sub">{seg.share}%</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

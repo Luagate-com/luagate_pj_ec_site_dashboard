@@ -1,10 +1,14 @@
-// TODO Ch15 ランキングリスト (横棒チャート)
-// Recharts (BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer) を使い
-// layout="vertical" で横棒のランキングチャートを描画してください。
-// ヒント
-// - height = max(320, items.length * 36) でアイテム数に応じて伸ばす
-// - YAxis dataKey="name" type="category" width={180}
-// - Cell fillOpacity={1 - idx * 0.06} で 1 位ほど濃く
+// Ch15 ランキングリスト (横棒チャート)
+// Recharts の BarChart を layout="vertical" にして横棒のランキングを描画する。
+import {
+  Bar,
+  BarChart,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 interface RankingItem {
   name: string;
@@ -19,26 +23,56 @@ interface RankingListProps {
   title?: string;
 }
 
-export function RankingList({ items, formatValue, color: _color = "#05B45B", title }: RankingListProps) {
-  // TODO 受講生はここを Recharts の BarChart (layout=vertical) で書き換えてください
+export function RankingList({ items, formatValue, color = "#05B45B", title }: RankingListProps) {
+  const top = items.slice(0, 10);
+  // アイテム数に応じて高さを伸ばす
+  const height = Math.max(320, top.length * 36);
+
+  if (top.length === 0) {
+    return (
+      <div className="rounded-2xl border border-line bg-white p-6">
+        {title && <h3 className="mb-4 text-base font-bold text-ink">{title}</h3>}
+        <div className="flex h-[200px] items-center justify-center text-sm text-ink-sub">
+          データがありません
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-line bg-white p-6">
       {title && <h3 className="mb-4 text-base font-bold text-ink">{title}</h3>}
-      <div className="space-y-2">
-        <p className="text-xs text-ink-sub">TODO Ch15 横棒ランキングチャート</p>
-        <ul className="space-y-1 text-sm text-ink">
-          {items.slice(0, 10).map((item, idx) => (
-            <li key={`${item.name}-${idx}`} className="flex items-center justify-between border-b border-dashed border-line py-1">
-              <span>
-                {idx + 1}. {item.name}
-              </span>
-              <span className="text-ink-sub">
-                {formatValue ? formatValue(item.value) : item.value.toLocaleString("ja-JP")}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <ResponsiveContainer width="100%" height={height}>
+        <BarChart layout="vertical" data={top} margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
+          <XAxis
+            type="number"
+            stroke="#727270"
+            fontSize={11}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={formatValue ? (v: number) => formatValue(v) : undefined}
+          />
+          <YAxis
+            type="category"
+            dataKey="name"
+            width={180}
+            stroke="#363635"
+            fontSize={11}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v: string) => (v.length > 14 ? v.slice(0, 14) + "…" : v)}
+          />
+          <Tooltip
+            formatter={(value: number) => (formatValue ? formatValue(value) : value.toLocaleString("ja-JP"))}
+          />
+          <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+            {top.map((_, idx) => (
+              // 1 位ほど濃く (上位ほど fillOpacity が高い)
+              <Cell key={idx} fill={color} fillOpacity={Math.max(0.4, 1 - idx * 0.06)} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
